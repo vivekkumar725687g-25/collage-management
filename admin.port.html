@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>College Admin Portal + AI Bot</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* --- CSS VARIABLES & RESET --- */
+        :root {
+            --primary-color: #4a47a3;
+            --secondary-color: #37348a;
+            --accent-color: #ff6b6b;
+            --bg-light: #f4f7f6;
+            --text-dark: #2d3436;
+            --white: #ffffff;
+            --bot-msg-bg: #e9ecef;
+            --user-msg-bg: #4a47a3;
+        }
+        * { box-sizing: border-box; }
+        body { font-family: 'Poppins', sans-serif; margin: 0; background-color: var(--bg-light); color: var(--text-dark); }
+
+        /* --- UI ELEMENTS --- */
+        .btn {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white; border: none; padding: 12px 24px; cursor: pointer; border-radius: 30px; font-weight: 600; transition: 0.3s;
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .btn-danger { background: linear-gradient(135deg, #ff6b6b, #ee5253); }
+
+        input { width: 100%; padding: 14px; margin: 8px 0; border: 2px solid #e0e0e0; border-radius: 12px; background: #fcfcfc; }
+        input:focus { outline: none; border-color: var(--primary-color); }
+
+        /* --- LOGIN SECTION --- */
+        #login-section {
+            display: flex; justify-content: center; align-items: center; height: 100vh;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        }
+        .login-card { background: white; padding: 3rem; border-radius: 20px; width: 350px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.2); }
+        
+        /* --- DASHBOARD SECTION --- */
+        #dashboard-section { display: none; height: 100vh; flex-direction: column; position: relative; }
+        header { background: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        
+        .main-container { flex: 1; padding: 30px; max-width: 1200px; margin: 0 auto; width: 100%; overflow-y: auto; }
+
+        .nav-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px; margin-bottom: 30px; }
+        .card { background: white; padding: 30px; border-radius: 16px; text-align: center; cursor: pointer; transition: 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0,0,0,0.1); }
+        .card i { font-size: 3rem; color: var(--primary-color); margin-bottom: 15px; }
+
+        .content-area { background: white; padding: 30px; border-radius: 16px; display: none; animation: fadeIn 0.4s; }
+        .content-area.active { display: block; }
+        @keyframes fadeIn { from { opacity:0; transform: translateY(10px);} to { opacity:1; transform: translateY(0);}}
+
+        table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 20px; }
+        th { background: var(--primary-color); color: white; padding: 15px; text-align: left; }
+        td { padding: 15px; border-bottom: 1px solid #eee; }
+
+        /* --- CHAT BOT STYLES (NEW) --- */
+        .chat-btn-float {
+            position: fixed; bottom: 30px; right: 30px;
+            background: var(--primary-color); color: white;
+            width: 60px; height: 60px; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 24px; cursor: pointer;
+            box-shadow: 0 10px 25px rgba(74, 71, 163, 0.4);
+            transition: 0.3s; z-index: 1000;
+        }
+        .chat-btn-float:hover { transform: scale(1.1); }
+
+        .chat-window {
+            position: fixed; bottom: 100px; right: 30px;
+            width: 350px; height: 450px;
+            background: white; border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+            display: none; flex-direction: column;
+            overflow: hidden; z-index: 1000; border: 1px solid #eee;
+        }
+
+        .chat-header {
+            background: var(--primary-color); color: white;
+            padding: 15px; font-weight: 600;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .chat-body {
+            flex: 1; padding: 15px; overflow-y: auto;
+            background: #f9f9ff; display: flex; flex-direction: column; gap: 10px;
+        }
+
+        .message { padding: 10px 15px; border-radius: 15px; max-width: 80%; font-size: 14px; line-height: 1.4; }
+        .bot-msg { background: var(--bot-msg-bg); color: #333; align-self: flex-start; border-bottom-left-radius: 2px; }
+        .user-msg { background: var(--user-msg-bg); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+
+        .chat-input-area {
+            padding: 10px; border-top: 1px solid #eee; display: flex; gap: 10px; background: white;
+        }
+        .chat-input-area input { margin: 0; padding: 10px; border-radius: 20px; font-size: 14px; }
+        .send-btn { background: var(--primary-color); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; }
+
+    </style>
+</head>
+<body>
+
+    <section id="login-section">
+        <div class="login-card">
+            <i class="fas fa-university" style="font-size: 3rem; color: var(--primary-color); margin-bottom: 1rem;"></i>
+            <h2>Admin Portal</h2>
+            <input type="text" id="username" placeholder="Username (admin)">
+            <input type="password" id="password" placeholder="Password (4321)">
+            <button class="btn" style="width: 100%; margin-top: 10px;" onclick="handleLogin()">Login</button>
+            <p id="error-msg" style="color: red; display: none; margin-top: 10px;">Invalid Credentials</p>
+        </div>
+    </section>
+
+    <section id="dashboard-section">
+        <header>
+            <h2><i class="fas fa-graduation-cap"></i> College Manager</h2>
+            <button class="btn btn-danger" onclick="logout()">Logout</button>
+        </header>
+
+        <div class="main-container">
+            <div class="nav-grid">
+                <div class="card" onclick="showSection('students')">
+                    <i class="fas fa-user-graduate"></i>
+                    <h3>Students</h3>
+                    <p>Manage Directory</p>
+                </div>
+                <div class="card" onclick="showSection('teachers')">
+                    <i class="fas fa-chalkboard-teacher"></i>
+                    <h3>Teachers</h3>
+                    <p>Manage Faculty</p>
+                </div>
+            </div>
+
+            <div id="students-view" class="content-area">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3>Student Directory</h3>
+                    <input type="text" placeholder="Search..." onkeyup="filterTable('studentTable', this.value)" style="width: 250px;">
+                </div>
+                <div style="display:flex; gap:10px; margin-top:15px;">
+                    <input type="text" id="new-std-name" placeholder="Name">
+                    <input type="text" id="new-std-dept" placeholder="Department">
+                    <button class="btn" onclick="addStudent()">Add</button>
+                </div>
+                <table id="studentTable">
+                    <thead><tr><th>ID</th><th>Name</th><th>Department</th></tr></thead>
+                    <tbody id="student-body"></tbody>
+                </table>
+            </div>
+
+            <div id="teachers-view" class="content-area">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3>Teacher Directory</h3>
+                    <input type="text" placeholder="Search..." onkeyup="filterTable('teacherTable', this.value)" style="width: 250px;">
+                </div>
+                <div style="display:flex; gap:10px; margin-top:15px;">
+                    <input type="text" id="new-teach-name" placeholder="Name">
+                    <input type="text" id="new-teach-sub" placeholder="Subject">
+                    <button class="btn" onclick="addTeacher()">Add</button>
+                </div>
+                <table id="teacherTable">
+                    <thead><tr><th>ID</th><th>Name</th><th>Subject</th></tr></thead>
+                    <tbody id="teacher-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="chat-btn-float" onclick="toggleChat()">
+            <i class="fas fa-robot"></i>
+        </div>
+
+        <div class="chat-window" id="chat-window">
+            <div class="chat-header">
+                <span><i class="fas fa-robot"></i> Campus Assistant</span>
+                <i class="fas fa-times" style="cursor: pointer;" onclick="toggleChat()"></i>
+            </div>
+            <div class="chat-body" id="chat-body">
+                <div class="message bot-msg">Hello! I am the College Bot. Ask me about Fees, Exams, or Admissions.</div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="chat-input" placeholder="Type a message..." onkeypress="handleEnter(event)">
+                <button class="send-btn" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+
+    </section>
+
+    <script>
+        // --- DATA & LOGIN ---
+        let students = [{ id: 1, name: "John Doe", dept: "CS" }, { id: 2, name: "Alice Smith", dept: "Math" }];
+        let teachers = [{ id: 1, name: "Dr. Brown", subject: "Physics" }, { id: 2, name: "Prof. Green", subject: "History" }];
+
+        function handleLogin() {
+            if (document.getElementById('username').value === 'admin' && document.getElementById('password').value === '4321') {
+                document.getElementById('login-section').style.display = 'none';
+                document.getElementById('dashboard-section').style.display = 'flex';
+                renderTables();
+            } else { document.getElementById('error-msg').style.display = 'block'; }
+        }
+
+        function logout() {
+            document.getElementById('login-section').style.display = 'flex';
+            document.getElementById('dashboard-section').style.display = 'none';
+            document.getElementById('chat-window').style.display = 'none'; // Close chat on logout
+        }
+
+        // --- NAVIGATION & TABLES ---
+        function showSection(section) {
+            document.getElementById('students-view').classList.remove('active');
+            document.getElementById('teachers-view').classList.remove('active');
+            if(section === 'students') document.getElementById('students-view').classList.add('active');
+            if(section === 'teachers') document.getElementById('teachers-view').classList.add('active');
+        }
+
+        function renderTables() {
+            document.getElementById('student-body').innerHTML = students.map(s => `<tr><td>#${s.id}</td><td>${s.name}</td><td>${s.dept}</td></tr>`).join('');
+            document.getElementById('teacher-body').innerHTML = teachers.map(t => `<tr><td>#${t.id}</td><td>${t.name}</td><td>${t.subject}</td></tr>`).join('');
+        }
+
+        function addStudent() {
+            let n = document.getElementById('new-std-name').value, d = document.getElementById('new-std-dept').value;
+            if(n && d) { students.push({ id: students.length+1, name: n, dept: d }); renderTables(); document.getElementById('new-std-name').value=''; document.getElementById('new-std-dept').value=''; }
+        }
+
+        function addTeacher() {
+            let n = document.getElementById('new-teach-name').value, s = document.getElementById('new-teach-sub').value;
+            if(n && s) { teachers.push({ id: teachers.length+1, name: n, subject: s }); renderTables(); document.getElementById('new-teach-name').value=''; document.getElementById('new-teach-sub').value=''; }
+        }
+
+        function filterTable(id, q) {
+            let tr = document.getElementById(id).getElementsByTagName("tr");
+            for (let i = 1; i < tr.length; i++) {
+                let td = tr[i].getElementsByTagName("td")[1];
+                tr[i].style.display = td && td.innerText.toLowerCase().includes(q.toLowerCase()) ? "" : "none";
+            }
+        }
+
+        // --- NEW: CHAT BOT LOGIC ---
+        function toggleChat() {
+            let win = document.getElementById('chat-window');
+            win.style.display = (win.style.display === 'flex') ? 'none' : 'flex';
+        }
+
+        function handleEnter(e) { if(e.key === 'Enter') sendMessage(); }
+
+        function sendMessage() {
+            let input = document.getElementById('chat-input');
+            let text = input.value.trim();
+            if(!text) return;
+
+            // Add User Message
+            appendMessage(text, 'user-msg');
+            input.value = '';
+
+            // Simulate Bot Thinking
+            setTimeout(() => {
+                let response = getBotResponse(text);
+                appendMessage(response, 'bot-msg');
+            }, 600);
+        }
+
+        function appendMessage(text, className) {
+            let div = document.createElement('div');
+            div.className = `message ${className}`;
+            div.innerText = text;
+            let body = document.getElementById('chat-body');
+            body.appendChild(div);
+            body.scrollTop = body.scrollHeight; // Auto scroll to bottom
+        }
+
+        // SIMPLE AI LOGIC
+        function getBotResponse(input) {
+            input = input.toLowerCase();
+            
+            if (input.includes("hello") || input.includes("hi")) return "Hi there! How can I help you today?";
+            if (input.includes("fee") || input.includes("cost")) return "Tuition fees are due by the 15th of this month. You can pay via the student portal.";
+            if (input.includes("exam") || input.includes("test")) return "Final exams start on December 10th. The schedule is available in the library.";
+            if (input.includes("admission") || input.includes("join")) return "Admissions are currently open for the Fall semester. Visit the registrar office.";
+            if (input.includes("contact") || input.includes("number")) return "You can contact admin at 555-0199 or email admin@college.edu.";
+            if (input.includes("thank")) return "You're welcome! Have a great day at college!";
+            
+            return "I'm not sure about that. Try asking about 'Fees', 'Exams', or 'Admissions'.";
+        }
+    </script>
+</body>
+</html>
